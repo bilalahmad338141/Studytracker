@@ -1,426 +1,161 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MedStudy Sync - Exam Prep</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <style>
-        body { 
-            font-family: 'Inter', sans-serif; 
-            background-color: #f8fafc; /* Slate 50 */
-        }
-        .glass-card {
-            background: #ffffff;
-            border-radius: 24px;
-            box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.05);
-            border: 1px solid rgba(226, 232, 240, 0.6);
-        }
-        .progress-bar { transition: width 1s linear; }
-        ::-webkit-scrollbar { width: 0px; }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MedStudy Sync - Sandups Prep</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Firebase SDKs for Live Sync -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 </head>
-<body class="text-slate-800 antialiased min-h-screen flex flex-col items-center p-4 sm:p-6 lg:p-10">
+<body class="bg-slate-50 text-slate-800 min-h-screen">
 
-    <div class="w-full max-w-4xl mx-auto flex flex-col gap-8">
-        
-        <!-- Header -->
-        <header class="text-center pt-2 pb-4">
-            <h1 class="text-3xl font-extrabold text-slate-800 flex items-center justify-center gap-3">
-                <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
-                MedStudy Sync
-            </h1>
-            <p class="text-slate-500 font-medium mt-2">5 Hours Daily Target • Sandups Prep</p>
-        </header>
+  <!-- Header -->
+  <header class="bg-white border-b border-slate-200 py-6 px-4 shadow-sm">
+    <div class="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div>
+        <h1 class="text-2xl font-bold text-slate-900 flex items-center gap-2">
+          <span class="text-blue-600">✚</span> MedStudy Sync
+        </h1>
+        <p class="text-sm text-slate-500">5-Hour Daily Library Target • Sandups Prep</p>
+      </div>
+      <div id="role-badge" class="px-3 py-1.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+        Loading view...
+      </div>
+    </div>
+  </header>
 
-        <!-- Notification Toast -->
-        <div id="toast" class="fixed top-4 right-4 px-6 py-4 rounded-xl shadow-2xl transform transition-all duration-300 translate-y-[-150%] opacity-0 z-50 text-sm font-semibold flex items-center gap-3">
-            <span id="toast-icon"></span>
-            <span id="toast-message">Notification</span>
-        </div>
-
-        <!-- 1. Landing / Setup Screen (Shown when no ?user= ID is provided) -->
-        <main id="screen-setup" class="glass-card p-8 md:p-12 hidden max-w-2xl mx-auto w-full">
-            <div class="text-center mb-8">
-                <h2 class="text-2xl font-bold text-slate-800 mb-3">Welcome to the Reading Room!</h2>
-                <p class="text-slate-500 text-sm leading-relaxed">
-                    Select a student to get their personal dashboard link. Share the link with them so they can track their 5 hours.
-                </p>
-            </div>
-            
-            <div class="space-y-4" id="link-list">
-                <!-- Javascript will inject the 4 specific users here -->
-            </div>
-        </main>
-
-        <!-- 2. Dashboard Screen (Shown when a valid ?user= is provided) -->
-        <main id="screen-dashboard" class="hidden flex flex-col gap-8 w-full">
-            
-            <!-- My Status Card -->
-            <div class="glass-card p-8 md:p-10 relative overflow-hidden bg-gradient-to-br from-white to-blue-50/50">
-                
-                <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
-                    <div>
-                        <h2 class="text-sm font-bold tracking-wider uppercase text-blue-600 mb-1">My Dashboard</h2>
-                        <h3 id="my-name" class="text-3xl font-extrabold text-slate-800">Loading...</h3>
-                    </div>
-                    <div id="status-badge" class="px-4 py-2 rounded-full text-sm font-bold bg-slate-100 text-slate-500 flex items-center gap-2">
-                        <span class="w-2.5 h-2.5 rounded-full bg-slate-400"></span> Paused
-                    </div>
-                </div>
-
-                <div class="flex flex-col lg:flex-row gap-8 items-center justify-between mt-6">
-                    <div class="flex-1 w-full text-center lg:text-left">
-                        <div id="my-timer" class="text-6xl md:text-7xl lg:text-8xl font-black tabular-nums tracking-tighter text-slate-800 mb-3 drop-shadow-sm">
-                            00:00:00
-                        </div>
-                        <p class="text-base text-slate-500 font-semibold" id="my-progress-text">0% of 5 hours completed</p>
-                    </div>
-                    
-                    <div class="w-full lg:w-auto flex-shrink-0">
-                        <button id="btn-toggle" onclick="app.toggleTimer()" class="w-full lg:w-64 h-20 rounded-2xl font-bold text-xl text-white shadow-xl shadow-blue-200/50 transition-all hover:scale-105 active:scale-95 flex justify-center items-center gap-3 bg-blue-600 hover:bg-blue-700">
-                            <span id="btn-icon">
-                                <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-                            </span>
-                            <span id="btn-text">Start Timer</span>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Main Progress Bar -->
-                <div class="mt-10 w-full bg-slate-200 rounded-full h-4 overflow-hidden shadow-inner">
-                    <div id="my-progress-bar" class="bg-gradient-to-r from-blue-500 to-indigo-500 h-4 rounded-full progress-bar" style="width: 0%"></div>
-                </div>
-            </div>
-
-            <!-- Friends Grid -->
-            <div>
-                <h3 class="text-lg font-bold text-slate-800 mb-4 px-1 flex items-center justify-between">
-                    <span>Group Progress</span>
-                    <span class="flex items-center gap-2 text-sm font-semibold text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full">
-                        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Live
-                    </span>
-                </h3>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6" id="friends-grid">
-                    <!-- Populated by JS -->
-                </div>
-            </div>
-            
-        </main>
+  <!-- Main Container -->
+  <main class="max-w-4xl mx-auto px-4 py-8">
+    
+    <!-- Admin / Share Links Banner (Visible only on neutral URL) -->
+    <div id="share-section" class="mb-8 p-4 bg-blue-50 border border-blue-200 rounded-xl hidden">
+      <h2 class="text-sm font-semibold text-blue-900 mb-2">📋 Personal Dashboard Links (Send to each friend):</h2>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs" id="share-links"></div>
     </div>
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, getDocs, getDoc, collection, onSnapshot, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    <!-- Student Cards Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6" id="cards-grid">
+      <!-- Nasir -->
+      <div id="card-nasir" class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm flex flex-col justify-between">
+        <div>
+          <div class="flex justify-between items-center mb-3">
+            <h3 class="text-lg font-bold text-slate-900">Nasir</h3>
+            <span id="badge-nasir" class="text-xs px-2.5 py-1 rounded-full font-medium bg-slate-100 text-slate-600">Offline</span>
+          </div>
+          <div class="text-4xl font-mono font-extrabold text-slate-800 tracking-tight my-4" id="time-nasir">00:00:00</div>
+          <!-- Progress Bar -->
+          <div class="w-full bg-slate-100 rounded-full h-2.5 mb-1 overflow-hidden">
+            <div id="bar-nasir" class="bg-blue-600 h-2.5 rounded-full transition-all duration-300" style="width: 0%"></div>
+          </div>
+          <div class="text-right text-xs text-slate-400" id="pct-nasir">0% of 5h target</div>
+        </div>
+        <div id="action-nasir" class="mt-6 pt-4 border-t border-slate-100">
+          <span class="text-xs text-slate-400 italic">View Only</span>
+        </div>
+      </div>
 
-        // Core App Configuration
-        const GOAL_SECONDS = 5 * 60 * 60; // 5 hours in seconds
-        
-        // Target Users
-        const USERS = {
-            '1': { id: 'user1', name: 'Nasir' },
-            '2': { id: 'user2', name: 'Zaka' },
-            '3': { id: 'user3', name: 'Wajid' },
-            '4': { id: 'user4', name: 'Mahboob' }
-        };
-        
-        // Environment handling
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'med-study-sync-pro';
-        let firebaseConfig = { projectId: "dummy" };
-        if (typeof __firebase_config !== 'undefined') {
-            try { firebaseConfig = JSON.parse(__firebase_config); } catch(e) {}
-        }
+      <!-- Zaka -->
+      <div id="card-zaka" class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm flex flex-col justify-between">
+        <div>
+          <div class="flex justify-between items-center mb-3">
+            <h3 class="text-lg font-bold text-slate-900">Zaka</h3>
+            <span id="badge-zaka" class="text-xs px-2.5 py-1 rounded-full font-medium bg-slate-100 text-slate-600">Offline</span>
+          </div>
+          <div class="text-4xl font-mono font-extrabold text-slate-800 tracking-tight my-4" id="time-zaka">00:00:00</div>
+          <div class="w-full bg-slate-100 rounded-full h-2.5 mb-1 overflow-hidden">
+            <div id="bar-zaka" class="bg-blue-600 h-2.5 rounded-full transition-all duration-300" style="width: 0%"></div>
+          </div>
+          <div class="text-right text-xs text-slate-400" id="pct-zaka">0% of 5h target</div>
+        </div>
+        <div id="action-zaka" class="mt-6 pt-4 border-t border-slate-100">
+          <span class="text-xs text-slate-400 italic">View Only</span>
+        </div>
+      </div>
 
-        const appFirebase = initializeApp(firebaseConfig);
-        const db = getFirestore(appFirebase);
-        const auth = getAuth(appFirebase);
-        
-        // Mandatory path as per strict rules
-        const PUBLIC_DATA_PATH = `artifacts/${appId}/public/data/studysessions`;
+      <!-- Wajid -->
+      <div id="card-wajid" class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm flex flex-col justify-between">
+        <div>
+          <div class="flex justify-between items-center mb-3">
+            <h3 class="text-lg font-bold text-slate-900">Wajid</h3>
+            <span id="badge-wajid" class="text-xs px-2.5 py-1 rounded-full font-medium bg-slate-100 text-slate-600">Offline</span>
+          </div>
+          <div class="text-4xl font-mono font-extrabold text-slate-800 tracking-tight my-4" id="time-wajid">00:00:00</div>
+          <div class="w-full bg-slate-100 rounded-full h-2.5 mb-1 overflow-hidden">
+            <div id="bar-wajid" class="bg-blue-600 h-2.5 rounded-full transition-all duration-300" style="width: 0%"></div>
+          </div>
+          <div class="text-right text-xs text-slate-400" id="pct-wajid">0% of 5h target</div>
+        </div>
+        <div id="action-wajid" class="mt-6 pt-4 border-t border-slate-100">
+          <span class="text-xs text-slate-400 italic">View Only</span>
+        </div>
+      </div>
 
-        const state = {
-            user: null,
-            myUserId: null, // e.g. 'user1'
-            students: {}, 
-            uiInterval: null
-        };
+      <!-- Mahboob -->
+      <div id="card-mahboob" class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm flex flex-col justify-between">
+        <div>
+          <div class="flex justify-between items-center mb-3">
+            <h3 class="text-lg font-bold text-slate-900">Mahboob</h3>
+            <span id="badge-mahboob" class="text-xs px-2.5 py-1 rounded-full font-medium bg-slate-100 text-slate-600">Offline</span>
+          </div>
+          <div class="text-4xl font-mono font-extrabold text-slate-800 tracking-tight my-4" id="time-mahboob">00:00:00</div>
+          <div class="w-full bg-slate-100 rounded-full h-2.5 mb-1 overflow-hidden">
+            <div id="bar-mahboob" class="bg-blue-600 h-2.5 rounded-full transition-all duration-300" style="width: 0%"></div>
+          </div>
+          <div class="text-right text-xs text-slate-400" id="pct-mahboob">0% of 5h target</div>
+        </div>
+        <div id="action-mahboob" class="mt-6 pt-4 border-t border-slate-100">
+          <span class="text-xs text-slate-400 italic">View Only</span>
+        </div>
+      </div>
+    </div>
+  </main>
 
-        window.app = {
-            init: async () => {
-                const urlParams = new URLSearchParams(window.location.search);
-                const userParam = urlParams.get('user');
-                
-                if (userParam && USERS[userParam]) {
-                    state.myUserId = USERS[userParam].id;
-                }
+  <script>
+    // --- 1. CONFIGURATION ---
+    // If you have a free Firebase project, paste your databaseURL here for live syncing across all 4 phones.
+    // e.g.: databaseURL: "https://your-project-id-default-rtdb.firebaseio.com"
+    const FIREBASE_CONFIG = {
+      databaseURL: "" 
+    };
 
-                try {
-                    const token = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-                    if (token) await signInWithCustomToken(auth, token);
-                    else await signInAnonymously(auth);
-                    
-                    state.user = auth.currentUser;
-                    
-                    await app.ensureDbInitialized();
-                    app.startRealtimeSync();
-                    
-                    // UI render loop
-                    state.uiInterval = setInterval(app.renderTick, 1000);
+    const STUDENTS = [
+      { id: "nasir", name: "Nasir" },
+      { id: "zaka", name: "Zaka" },
+      { id: "wajid", name: "Wajid" },
+      { id: "mahboob", name: "Mahboob" }
+    ];
+    const TARGET_SECONDS = 5 * 3600; // 5 Hours
 
-                    if (state.myUserId) {
-                        document.getElementById('screen-dashboard').classList.remove('hidden');
-                    } else {
-                        app.renderSetupScreen();
-                    }
+    // App state
+    let state = {
+      nasir: { elapsed: 0, isRunning: false, lastStarted: null },
+      zaka: { elapsed: 0, isRunning: false, lastStarted: null },
+      wajid: { elapsed: 0, isRunning: false, lastStarted: null },
+      mahboob: { elapsed: 0, isRunning: false, lastStarted: null }
+    };
 
-                } catch (error) {
-                    console.error("Init Error:", error);
-                    app.showToast("Connection failed. Check console.", "error");
-                }
-            },
+    // Detect Current User from URL (?user=nasir)
+    const urlParams = new URLSearchParams(window.location.search);
+    const currentUser = (urlParams.get("user") || "").toLowerCase().trim();
 
-            ensureDbInitialized: async () => {
-                // Rule: Auth before Queries is respected (called inside init after signIn)
-                const colRef = collection(db, PUBLIC_DATA_PATH);
-                const snap = await getDocs(colRef);
-                
-                // If any of the 4 users is missing, create their doc
-                for (const key in USERS) {
-                    const u = USERS[key];
-                    const dRef = doc(db, PUBLIC_DATA_PATH, u.id);
-                    const dSnap = await getDoc(dRef);
-                    if (!dSnap.exists()) {
-                        await setDoc(dRef, {
-                            name: u.name,
-                            accumulatedTime: 0,
-                            sessionStartTime: null,
-                            isStudying: false,
-                            lastUpdated: Date.now()
-                        });
-                    }
-                }
-            },
+    // Setup Header & Share Links
+    const roleBadge = document.getElementById("role-badge");
+    const shareSection = document.getElementById("share-section");
+    const shareLinksDiv = document.getElementById("share-links");
 
-            startRealtimeSync: () => {
-                const colRef = collection(db, PUBLIC_DATA_PATH);
-                onSnapshot(colRef, (snapshot) => {
-                    snapshot.forEach((docSnap) => {
-                        state.students[docSnap.id] = docSnap.data();
-                    });
-                    app.renderTick(); 
-                }, (error) => {
-                    console.error("Sync error:", error);
-                });
-            },
+    const matchedStudent = STUDENTS.find(s => s.id === currentUser);
 
-            calculateTotalSeconds: (studentData) => {
-                if (!studentData) return 0;
-                let total = studentData.accumulatedTime || 0;
-                if (studentData.isStudying && studentData.sessionStartTime) {
-                    const elapsed = Math.floor((Date.now() - studentData.sessionStartTime) / 1000);
-                    total += Math.max(0, elapsed);
-                }
-                return total;
-            },
+    if (matchedStudent) {
+      roleBadge.innerHTML = `Signed in as: <strong class="text-blue-600">${matchedStudent.name}</strong>`;
+      roleBadge.classList.replace("bg-slate-100", "bg-blue-100");
+    } else {
+      roleBadge.innerHTML = `Mode: <strong class="text-purple-600">Neutral Monitor (Admin)</strong>`;
+      shareSection.classList.remove("hidden");
 
-            formatTime: (totalSeconds) => {
-                const h = Math.floor(totalSeconds / 3600);
-                const m = Math.floor((totalSeconds % 3600) / 60);
-                const s = totalSeconds % 60;
-                return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-            },
-
-            renderTick: () => {
-                if (state.myUserId) {
-                    app.renderMyCard();
-                    app.renderFriendsGrid();
-                }
-            },
-
-            renderMyCard: () => {
-                const myData = state.students[state.myUserId];
-                if (!myData) return;
-
-                document.getElementById('my-name').textContent = myData.name;
-                
-                const totalSec = app.calculateTotalSeconds(myData);
-                document.getElementById('my-timer').textContent = app.formatTime(totalSec);
-
-                const pctRaw = (totalSec / GOAL_SECONDS) * 100;
-                const pct = Math.min(pctRaw, 100).toFixed(1);
-                document.getElementById('my-progress-bar').style.width = `${pct}%`;
-                
-                const timeRemaining = Math.max(0, GOAL_SECONDS - totalSec);
-                if (timeRemaining > 0) {
-                    const rH = Math.floor(timeRemaining / 3600);
-                    const rM = Math.floor((timeRemaining % 3600) / 60);
-                    document.getElementById('my-progress-text').textContent = `${pct}% done. ${rH}h ${rM}m remaining to hit 5 hours.`;
-                } else {
-                    document.getElementById('my-progress-text').textContent = `🎯 5 Hour Goal Completed! (${pctRaw.toFixed(1)}%)`;
-                }
-
-                // Update controls
-                const btn = document.getElementById('btn-toggle');
-                const btnText = document.getElementById('btn-text');
-                const btnIcon = document.getElementById('btn-icon');
-                const badge = document.getElementById('status-badge');
-
-                if (myData.isStudying) {
-                    btnText.textContent = "Pause Timer";
-                    btnIcon.innerHTML = `<svg class="w-8 h-8" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>`;
-                    btn.className = "w-full lg:w-64 h-20 rounded-2xl font-bold text-xl text-slate-800 shadow-xl shadow-amber-200 transition-all hover:scale-105 active:scale-95 flex justify-center items-center gap-3 bg-amber-400 hover:bg-amber-500";
-                    
-                    badge.innerHTML = `<span class="relative flex h-3 w-3"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span><span class="relative inline-flex rounded-full h-3 w-3 bg-blue-500"></span></span> Studying Now`;
-                    badge.className = "px-4 py-2 rounded-full text-sm font-bold bg-blue-50 text-blue-700 flex items-center gap-2 border border-blue-200";
-                } else {
-                    btnText.textContent = "Start Timer";
-                    btnIcon.innerHTML = `<svg class="w-8 h-8" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>`;
-                    btn.className = "w-full lg:w-64 h-20 rounded-2xl font-bold text-xl text-white shadow-xl shadow-blue-200/50 transition-all hover:scale-105 active:scale-95 flex justify-center items-center gap-3 bg-blue-600 hover:bg-blue-700";
-                    
-                    badge.innerHTML = `<span class="w-2.5 h-2.5 rounded-full bg-slate-400"></span> Paused`;
-                    badge.className = "px-4 py-2 rounded-full text-sm font-bold bg-slate-100 text-slate-500 flex items-center gap-2 border border-slate-200";
-                }
-            },
-
-            renderFriendsGrid: () => {
-                const grid = document.getElementById('friends-grid');
-                grid.innerHTML = '';
-
-                // Show all users except the current user
-                const friends = Object.values(USERS).filter(u => u.id !== state.myUserId);
-
-                friends.forEach(f => {
-                    const data = state.students[f.id];
-                    if(!data) return; // DB syncing
-
-                    const totalSec = app.calculateTotalSeconds(data);
-                    const pct = Math.min((totalSec / GOAL_SECONDS) * 100, 100);
-                    const isDone = totalSec >= GOAL_SECONDS;
-                    
-                    const statusUI = isDone 
-                        ? `<span class="px-2 py-1 bg-emerald-50 text-emerald-600 text-xs font-bold rounded-md border border-emerald-200">Goal Met</span>`
-                        : data.isStudying 
-                            ? `<span class="flex items-center gap-1.5 px-2 py-1 bg-blue-50 text-blue-600 text-xs font-bold rounded-md border border-blue-200"><span class="flex h-2 w-2 relative"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span><span class="relative inline-flex rounded-full h-2 w-2 bg-blue-600"></span></span> Studying</span>`
-                            : `<span class="px-2 py-1 bg-slate-100 text-slate-500 text-xs font-bold rounded-md border border-slate-200">Paused</span>`;
-
-                    const card = document.createElement('div');
-                    card.className = "glass-card p-6 flex flex-col gap-4 bg-white hover:shadow-xl transition-shadow duration-300";
-                    card.innerHTML = `
-                        <div class="flex justify-between items-center border-b border-slate-100 pb-3">
-                            <span class="text-lg font-bold text-slate-800">${data.name}</span>
-                            ${statusUI}
-                        </div>
-                        <div class="text-4xl font-black tracking-tight text-slate-800 my-1">
-                            ${app.formatTime(totalSec)}
-                        </div>
-                        <div class="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
-                            <div class="bg-${isDone ? 'emerald' : (data.isStudying ? 'blue' : 'slate')}-500 h-full rounded-full progress-bar" style="width: ${pct}%"></div>
-                        </div>
-                    `;
-                    grid.appendChild(card);
-                });
-            },
-
-            toggleTimer: async () => {
-                if (!state.myUserId || !state.user) return;
-                
-                const myRef = doc(db, PUBLIC_DATA_PATH, state.myUserId);
-                const myData = state.students[state.myUserId];
-                
-                try {
-                    if (myData.isStudying) {
-                        // Action: Pause
-                        const elapsed = Math.floor((Date.now() - myData.sessionStartTime) / 1000);
-                        const newTotal = (myData.accumulatedTime || 0) + elapsed;
-                        
-                        await updateDoc(myRef, {
-                            isStudying: false,
-                            sessionStartTime: null,
-                            accumulatedTime: newTotal,
-                            lastUpdated: Date.now()
-                        });
-                        app.showToast("Timer paused.");
-                    } else {
-                        // Action: Start
-                        await updateDoc(myRef, {
-                            isStudying: true,
-                            sessionStartTime: Date.now(),
-                            lastUpdated: Date.now()
-                        });
-                        app.showToast("Timer started! Focus up.", "success");
-                    }
-                } catch (e) {
-                    console.error(e);
-                    app.showToast("Network error. Try again.", "error");
-                }
-            },
-
-            renderSetupScreen: () => {
-                document.getElementById('screen-setup').classList.remove('hidden');
-                const list = document.getElementById('link-list');
-                list.innerHTML = '';
-                
-                const baseUrl = window.location.origin + window.location.pathname;
-                
-                Object.keys(USERS).forEach(key => {
-                    const u = USERS[key];
-                    const linkUrl = `${baseUrl}?user=${key}`;
-                    
-                    const div = document.createElement('div');
-                    div.className = "flex flex-col sm:flex-row justify-between items-center p-4 border border-slate-200 rounded-xl bg-slate-50 gap-4";
-                    div.innerHTML = `
-                        <div class="font-bold text-lg text-slate-800">${u.name}</div>
-                        <button onclick="app.copyLink('${linkUrl}')" class="w-full sm:w-auto px-5 py-2.5 bg-white border-2 border-slate-200 hover:border-blue-500 hover:text-blue-600 rounded-lg text-sm font-bold transition-all shadow-sm flex justify-center items-center gap-2">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
-                            Copy Invite Link
-                        </button>
-                    `;
-                    list.appendChild(div);
-                });
-            },
-
-            copyLink: (text) => {
-                const textArea = document.createElement("textarea");
-                textArea.value = text;
-                textArea.style.position = "fixed"; 
-                document.body.appendChild(textArea);
-                textArea.focus();
-                textArea.select();
-                try {
-                    document.execCommand('copy');
-                    app.showToast("Link copied! Share it with them.", "success");
-                } catch (err) {
-                    app.showToast("Failed to copy link.", "error");
-                }
-                document.body.removeChild(textArea);
-            },
-
-            showToast: (msg, type = 'info') => {
-                const toast = document.getElementById('toast');
-                const icon = document.getElementById('toast-icon');
-                
-                document.getElementById('toast-message').textContent = msg;
-                
-                if (type === 'error') {
-                    toast.className = "fixed top-4 right-4 px-6 py-4 rounded-xl shadow-2xl transform transition-all duration-300 z-50 text-sm font-semibold flex items-center gap-3 bg-red-600 text-white";
-                    icon.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
-                } else if (type === 'success') {
-                    toast.className = "fixed top-4 right-4 px-6 py-4 rounded-xl shadow-2xl transform transition-all duration-300 z-50 text-sm font-semibold flex items-center gap-3 bg-emerald-600 text-white";
-                    icon.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>`;
-                } else {
-                    toast.className = "fixed top-4 right-4 px-6 py-4 rounded-xl shadow-2xl transform transition-all duration-300 z-50 text-sm font-semibold flex items-center gap-3 bg-slate-800 text-white";
-                    icon.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
-                }
-
-                toast.classList.remove('opacity-0', 'translate-y-[-150%]');
-                setTimeout(() => toast.classList.add('opacity-0', 'translate-y-[-150%]'), 3000);
-            }
-        };
-
-        // Initialize App
-        app.init();
-    </script>
-</body>
-</html>
+      const baseUrl = window.location.origin + window.location.pathname;
+      shareLinksDiv.innerHTML = STUDENTS.map(s => `
+        <div class="flex items-center justify-between bg-white p-2 rounded border border-blue-100">
+          <span class="font-medium text-slate-700">${s.name}</span>
+          <button onclick="navigator.clipboard.write
