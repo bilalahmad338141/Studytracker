@@ -9,111 +9,105 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 </head>
-<body class="bg-slate-50 text-slate-800 min-h-screen">
+<body class="bg-slate-50 text-slate-800 min-h-screen font-sans antialiased">
 
-  <!-- Header -->
-  <header class="bg-white border-b border-slate-200 py-5 px-4 shadow-sm">
-    <div class="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+  <!-- ================= USER VIEW (Minimal Focus Mode) ================= -->
+  <div id="user-view" class="hidden min-h-screen flex flex-col justify-between p-4 sm:p-6 max-w-xl mx-auto">
+    <!-- User Header -->
+    <header class="flex items-center justify-between pt-2">
       <div>
-        <h1 class="text-2xl font-bold text-slate-900 flex items-center gap-2">
-          <span class="text-blue-600">✚</span> MedStudy Sync
+        <h2 id="u-name" class="text-2xl font-black text-slate-900 tracking-tight"></h2>
+        <p id="u-date" class="text-xs font-semibold text-slate-500 uppercase tracking-wider mt-0.5"></p>
+      </div>
+      <button onclick="openGroupModal()" class="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white border border-slate-200 text-xs font-bold text-slate-700 shadow-sm hover:bg-slate-50 active:scale-95 transition">
+        👥 <span>Group Progress</span>
+      </button>
+    </header>
+
+    <!-- User Timer Card -->
+    <main class="my-auto py-8 text-center flex flex-col items-center">
+      <div id="u-badge" class="mb-4 px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-600 border border-slate-200 inline-block">
+        Offline
+      </div>
+
+      <!-- Live Clock -->
+      <div id="u-timer" class="text-6xl sm:text-7xl font-mono font-black text-slate-900 tracking-tight my-2">
+        00:00:00
+      </div>
+
+      <!-- Progress Section -->
+      <div class="w-full max-w-sm mt-6">
+        <div class="flex justify-between text-xs font-semibold text-slate-500 mb-2">
+          <span>Daily Target: 5h</span>
+          <span id="u-pct">0%</span>
+        </div>
+        <div class="w-full bg-slate-200/70 rounded-full h-3 overflow-hidden">
+          <div id="u-bar" class="bg-emerald-600 h-3 rounded-full transition-all duration-300" style="width: 0%"></div>
+        </div>
+      </div>
+
+      <!-- Timer Control Button -->
+      <div class="w-full max-w-sm mt-10">
+        <button id="u-toggle-btn" onclick="userToggleTimer()" class="w-full py-4 rounded-2xl font-bold text-base text-white bg-emerald-600 hover:bg-emerald-700 active:scale-95 shadow-md transition">
+          Start Study Timer
+        </button>
+      </div>
+    </main>
+
+    <footer class="text-center text-xs text-slate-400 pb-2">
+      Sandups Medical Prep • Timers auto-reset daily
+    </footer>
+  </div>
+
+  <!-- ================= ADMIN VIEW (Neutral Monitor) ================= -->
+  <div id="admin-view" class="hidden max-w-4xl mx-auto px-4 py-8">
+    <!-- Admin Header -->
+    <header class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div>
+        <h1 class="text-2xl font-black text-slate-900 flex items-center gap-2">
+          <span class="text-blue-600">✚</span> MedStudy Monitor
         </h1>
-        <p class="text-xs sm:text-sm text-slate-500">5-Hour Daily Library Target • Sandups Prep</p>
+        <p id="admin-date" class="text-xs font-semibold text-slate-500 mt-1"></p>
       </div>
-      <div id="role-badge" class="px-3.5 py-1.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">
-        Neutral Monitor (Admin)
+      <div class="flex items-center gap-2">
+        <span class="px-3 py-1.5 rounded-full text-xs font-semibold bg-purple-100 text-purple-700 border border-purple-200">
+          Admin Mode
+        </span>
+        <button onclick="adminResetAll()" class="px-3 py-1.5 rounded-full text-xs font-semibold bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 transition">
+          Reset All
+        </button>
       </div>
+    </header>
+
+    <!-- Share Links Box -->
+    <section class="bg-blue-50/70 border border-blue-200 rounded-2xl p-5 mb-8">
+      <h2 class="text-xs font-bold uppercase tracking-wider text-blue-900 mb-2">📋 Personal Share Links (Send to Friends)</h2>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs" id="admin-share-links"></div>
+    </section>
+
+    <!-- Grid of All 4 Users -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6" id="admin-cards"></div>
+  </div>
+
+  <!-- ================= GROUP PREVIEW MODAL (For Individual Users) ================= -->
+  <div id="group-modal" class="hidden fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100 max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between pb-4 border-b border-slate-100 mb-4">
+        <div>
+          <h3 class="text-lg font-bold text-slate-900">Group Live Progress</h3>
+          <p class="text-xs text-slate-500">Live 5-hour target standings</p>
+        </div>
+        <button onclick="closeGroupModal()" class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 font-bold flex items-center justify-center text-sm">
+          ✕
+        </button>
+      </div>
+
+      <div class="space-y-3.5" id="group-modal-list"></div>
     </div>
-  </header>
-
-  <!-- Main Container -->
-  <main class="max-w-4xl mx-auto px-4 py-8">
-    
-    <!-- Admin Links Box (Visible only on the neutral link) -->
-    <div id="share-section" class="mb-8 p-5 bg-blue-50/70 border border-blue-200 rounded-2xl hidden">
-      <h2 class="text-sm font-bold text-blue-950 mb-1">📋 Personal Dashboard Links</h2>
-      <p class="text-xs text-blue-800 mb-3">Send each friend their unique link so only they can control their timer:</p>
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs" id="share-links"></div>
-    </div>
-
-    <!-- Student Cards Grid -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6" id="cards-grid">
-      <!-- Nasir -->
-      <div id="card-nasir" class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm flex flex-col justify-between">
-        <div>
-          <div class="flex justify-between items-center mb-3">
-            <h3 class="text-lg font-bold text-slate-900">Nasir</h3>
-            <span id="badge-nasir" class="text-xs px-2.5 py-1 rounded-full font-medium bg-slate-100 text-slate-600">Offline</span>
-          </div>
-          <div class="text-4xl font-mono font-extrabold text-slate-800 tracking-tight my-3" id="time-nasir">00:00:00</div>
-          <div class="w-full bg-slate-100 rounded-full h-2.5 mb-1.5 overflow-hidden">
-            <div id="bar-nasir" class="bg-blue-600 h-2.5 rounded-full transition-all duration-300" style="width: 0%"></div>
-          </div>
-          <div class="text-right text-xs text-slate-400" id="pct-nasir">0% of 5h target</div>
-        </div>
-        <div id="action-nasir" class="mt-6 pt-4 border-t border-slate-100">
-          <span class="text-xs text-slate-400 italic">View Only</span>
-        </div>
-      </div>
-
-      <!-- Zaka -->
-      <div id="card-zaka" class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm flex flex-col justify-between">
-        <div>
-          <div class="flex justify-between items-center mb-3">
-            <h3 class="text-lg font-bold text-slate-900">Zaka</h3>
-            <span id="badge-zaka" class="text-xs px-2.5 py-1 rounded-full font-medium bg-slate-100 text-slate-600">Offline</span>
-          </div>
-          <div class="text-4xl font-mono font-extrabold text-slate-800 tracking-tight my-3" id="time-zaka">00:00:00</div>
-          <div class="w-full bg-slate-100 rounded-full h-2.5 mb-1.5 overflow-hidden">
-            <div id="bar-zaka" class="bg-blue-600 h-2.5 rounded-full transition-all duration-300" style="width: 0%"></div>
-          </div>
-          <div class="text-right text-xs text-slate-400" id="pct-zaka">0% of 5h target</div>
-        </div>
-        <div id="action-zaka" class="mt-6 pt-4 border-t border-slate-100">
-          <span class="text-xs text-slate-400 italic">View Only</span>
-        </div>
-      </div>
-
-      <!-- Wajid -->
-      <div id="card-wajid" class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm flex flex-col justify-between">
-        <div>
-          <div class="flex justify-between items-center mb-3">
-            <h3 class="text-lg font-bold text-slate-900">Wajid</h3>
-            <span id="badge-wajid" class="text-xs px-2.5 py-1 rounded-full font-medium bg-slate-100 text-slate-600">Offline</span>
-          </div>
-          <div class="text-4xl font-mono font-extrabold text-slate-800 tracking-tight my-3" id="time-wajid">00:00:00</div>
-          <div class="w-full bg-slate-100 rounded-full h-2.5 mb-1.5 overflow-hidden">
-            <div id="bar-wajid" class="bg-blue-600 h-2.5 rounded-full transition-all duration-300" style="width: 0%"></div>
-          </div>
-          <div class="text-right text-xs text-slate-400" id="pct-wajid">0% of 5h target</div>
-        </div>
-        <div id="action-wajid" class="mt-6 pt-4 border-t border-slate-100">
-          <span class="text-xs text-slate-400 italic">View Only</span>
-        </div>
-      </div>
-
-      <!-- Mahboob -->
-      <div id="card-mahboob" class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm flex flex-col justify-between">
-        <div>
-          <div class="flex justify-between items-center mb-3">
-            <h3 class="text-lg font-bold text-slate-900">Mahboob</h3>
-            <span id="badge-mahboob" class="text-xs px-2.5 py-1 rounded-full font-medium bg-slate-100 text-slate-600">Offline</span>
-          </div>
-          <div class="text-4xl font-mono font-extrabold text-slate-800 tracking-tight my-3" id="time-mahboob">00:00:00</div>
-          <div class="w-full bg-slate-100 rounded-full h-2.5 mb-1.5 overflow-hidden">
-            <div id="bar-mahboob" class="bg-blue-600 h-2.5 rounded-full transition-all duration-300" style="width: 0%"></div>
-          </div>
-          <div class="text-right text-xs text-slate-400" id="pct-mahboob">0% of 5h target</div>
-        </div>
-        <div id="action-mahboob" class="mt-6 pt-4 border-t border-slate-100">
-          <span class="text-xs text-slate-400 italic">View Only</span>
-        </div>
-      </div>
-    </div>
-  </main>
+  </div>
 
   <script>
-    // 1. CONFIGURATION (PRE-FILLED WITH YOUR DATABASE)
+    // 1. CONFIGURATION
     const RTDB_URL = "https://study-tracker-time-sync-default-rtdb.firebaseio.com";
     const TARGET_SECONDS = 5 * 3600; // 5 Hours Target
 
@@ -124,58 +118,79 @@
       { id: "mahboob", name: "Mahboob" }
     ];
 
+    function getTodayKey() {
+      const d = new Date();
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    }
+
+    function getFormattedDate() {
+      return new Date().toLocaleDateString(undefined, {
+        weekday: 'long', month: 'short', day: 'numeric', year: 'numeric'
+      });
+    }
+
+    // App state initialized for today
     let state = {
-      nasir: { elapsed: 0, isRunning: false, startTime: 0 },
-      zaka: { elapsed: 0, isRunning: false, startTime: 0 },
-      wajid: { elapsed: 0, isRunning: false, startTime: 0 },
-      mahboob: { elapsed: 0, isRunning: false, startTime: 0 }
+      date: getTodayKey(),
+      students: {
+        nasir: { elapsed: 0, isRunning: false, startTime: 0 },
+        zaka: { elapsed: 0, isRunning: false, startTime: 0 },
+        wajid: { elapsed: 0, isRunning: false, startTime: 0 },
+        mahboob: { elapsed: 0, isRunning: false, startTime: 0 }
+      }
     };
 
-    // 2. DETECT USER ROLE FROM URL (?user=nasir)
+    // Role Detection
     const urlParams = new URLSearchParams(window.location.search);
     const currentUser = (urlParams.get("user") || "").toLowerCase().trim();
-    const matchedStudent = STUDENTS.find(s => s.id === currentUser);
+    const activeStudent = STUDENTS.find(s => s.id === currentUser);
 
-    const roleBadge = document.getElementById("role-badge");
-    const shareSection = document.getElementById("share-section");
-    const shareLinksDiv = document.getElementById("share-links");
-
-    if (matchedStudent) {
-      roleBadge.innerHTML = `Signed in as: <strong class="text-emerald-700">${matchedStudent.name}</strong>`;
-      roleBadge.className = "px-3.5 py-1.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200 flex items-center gap-1.5";
-
-      // Render controls specifically for this user
-      const actionBox = document.getElementById(`action-${matchedStudent.id}`);
-      actionBox.innerHTML = `
-        <div class="flex gap-2">
-          <button id="toggle-btn" onclick="toggleTimer('${matchedStudent.id}')" 
-                  class="flex-1 py-2.5 rounded-xl font-bold text-sm text-white bg-green-600 hover:bg-green-700 active:scale-95 transition shadow-sm">
-            Start Study Timer
-          </button>
-          <button onclick="resetTimer('${matchedStudent.id}')" 
-                  class="px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-500 bg-slate-100 hover:bg-red-50 hover:text-red-600 transition">
-            Reset
-          </button>
-        </div>
-      `;
+    // 2. INITIALIZE VIEW ROUTING
+    if (activeStudent) {
+      document.getElementById("user-view").classList.remove("hidden");
+      document.getElementById("u-name").textContent = activeStudent.name;
+      document.getElementById("u-date").textContent = getFormattedDate();
     } else {
-      roleBadge.innerHTML = `Mode: <strong class="text-purple-700">Neutral Monitor (Admin)</strong>`;
-      roleBadge.className = "px-3.5 py-1.5 rounded-full text-xs font-semibold bg-purple-50 text-purple-800 border border-purple-200";
-      shareSection.classList.remove("hidden");
+      document.getElementById("admin-view").classList.remove("hidden");
+      document.getElementById("admin-date").textContent = `Today: ${getFormattedDate()}`;
 
+      // Build Admin Share Links
       const baseUrl = window.location.origin + window.location.pathname;
-      shareLinksDiv.innerHTML = STUDENTS.map(s => `
-        <div class="flex items-center justify-between bg-white px-3 py-2 rounded-xl border border-blue-100 shadow-2xs">
+      document.getElementById("admin-share-links").innerHTML = STUDENTS.map(s => `
+        <div class="flex items-center justify-between bg-white px-3 py-2 rounded-xl border border-blue-100">
           <span class="font-bold text-slate-700">${s.name}</span>
-          <button onclick="navigator.clipboard.writeText('${baseUrl}?user=${s.id}'); alert('Copied dashboard link for ${s.name}!')" 
-                  class="px-3 py-1 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white rounded-lg font-semibold text-xs transition">
+          <button onclick="navigator.clipboard.writeText('${baseUrl}?user=${s.id}'); alert('Copied link for ${s.name}!')" 
+                  class="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-xs">
             Copy Link
           </button>
         </div>
       `).join("");
+
+      // Build Admin Cards Grid
+      document.getElementById("admin-cards").innerHTML = STUDENTS.map(s => `
+        <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm flex flex-col justify-between">
+          <div>
+            <div class="flex justify-between items-center mb-3">
+              <h3 class="text-lg font-bold text-slate-900">${s.name}</h3>
+              <span id="adm-badge-${s.id}" class="text-xs px-2.5 py-1 rounded-full font-medium bg-slate-100 text-slate-600">Offline</span>
+            </div>
+            <div class="text-4xl font-mono font-extrabold text-slate-800 tracking-tight my-3" id="adm-time-${s.id}">00:00:00</div>
+            <div class="w-full bg-slate-100 rounded-full h-2.5 mb-1.5 overflow-hidden">
+              <div id="adm-bar-${s.id}" class="bg-blue-600 h-2.5 rounded-full transition-all duration-300" style="width: 0%"></div>
+            </div>
+            <div class="text-right text-xs text-slate-400" id="adm-pct-${s.id}">0% of 5h target</div>
+          </div>
+          <div class="mt-6 pt-4 border-t border-slate-100 flex justify-between items-center">
+            <span class="text-xs text-slate-400">Admin Control</span>
+            <button onclick="adminResetUser('${s.id}')" class="px-3 py-1 rounded-lg text-xs font-semibold text-red-600 bg-red-50 hover:bg-red-100 transition">
+              Reset Timer
+            </button>
+          </div>
+        </div>
+      `).join("");
     }
 
-    // 3. UI RENDERING & TIMER LOGIC
+    // 3. TIMER COMPUTATION
     function formatTime(totalSec) {
       const h = String(Math.floor(totalSec / 3600)).padStart(2, "0");
       const m = String(Math.floor((totalSec % 3600) / 60)).padStart(2, "0");
@@ -192,73 +207,140 @@
       return total;
     }
 
+    // 4. UI RENDERING
     function renderUI() {
-      STUDENTS.forEach(student => {
-        const data = state[student.id];
-        const currentSec = calculateSeconds(data);
+      const today = getTodayKey();
 
-        // Update Clock
-        document.getElementById(`time-${student.id}`).textContent = formatTime(currentSec);
+      // Check if day changed while running
+      if (state.date && state.date !== today) {
+        state.date = today;
+        STUDENTS.forEach(s => {
+          state.students[s.id] = { elapsed: 0, isRunning: false, startTime: 0 };
+        });
+        saveCloud();
+      }
 
-        // Update Progress Bar
-        const pct = Math.min(100, Math.round((currentSec / TARGET_SECONDS) * 100));
-        document.getElementById(`bar-${student.id}`).style.width = `${pct}%`;
-        document.getElementById(`pct-${student.id}`).textContent = `${pct}% of 5h target`;
+      // Render Individual User View
+      if (activeStudent) {
+        const myData = state.students[activeStudent.id];
+        const sec = calculateSeconds(myData);
+        const pct = Math.min(100, Math.round((sec / TARGET_SECONDS) * 100));
 
-        // Update Status Badge
-        const badge = document.getElementById(`badge-${student.id}`);
-        if (currentSec >= TARGET_SECONDS) {
-          badge.className = "text-xs px-2.5 py-1 rounded-full font-bold bg-green-100 text-green-700 border border-green-200";
-          badge.textContent = "Goal Reached ✓";
-        } else if (data.isRunning) {
-          badge.className = "text-xs px-2.5 py-1 rounded-full font-bold bg-emerald-500 text-white animate-pulse";
-          badge.textContent = "Studying Now";
+        document.getElementById("u-timer").textContent = formatTime(sec);
+        document.getElementById("u-bar").style.width = `${pct}%`;
+        document.getElementById("u-pct").textContent = `${pct}% of 5h target`;
+
+        const badge = document.getElementById("u-badge");
+        const btn = document.getElementById("u-toggle-btn");
+
+        if (sec >= TARGET_SECONDS) {
+          badge.className = "mb-4 px-3 py-1 rounded-full text-xs font-bold bg-green-100 text-green-700 border border-green-200 inline-block";
+          badge.textContent = "Target Completed ✓";
+        } else if (myData.isRunning) {
+          badge.className = "mb-4 px-3 py-1 rounded-full text-xs font-bold bg-emerald-500 text-white animate-pulse inline-block";
+          badge.textContent = "Currently Studying";
         } else {
-          badge.className = "text-xs px-2.5 py-1 rounded-full font-medium bg-slate-100 text-slate-500";
-          badge.textContent = data.elapsed > 0 ? "Paused" : "Offline";
+          badge.className = "mb-4 px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-500 border border-slate-200 inline-block";
+          badge.textContent = myData.elapsed > 0 ? "Paused" : "Offline";
         }
 
-        // Update active user's button state
-        if (currentUser === student.id) {
-          const btn = document.getElementById("toggle-btn");
-          if (btn) {
-            if (data.isRunning) {
-              btn.textContent = "Pause Timer";
-              btn.className = "flex-1 py-2.5 rounded-xl font-bold text-sm text-white bg-amber-500 hover:bg-amber-600 transition shadow-sm";
-            } else {
-              btn.textContent = data.elapsed > 0 ? "Resume Timer" : "Start Study Timer";
-              btn.className = "flex-1 py-2.5 rounded-xl font-bold text-sm text-white bg-green-600 hover:bg-green-700 transition shadow-sm";
-            }
-          }
+        if (myData.isRunning) {
+          btn.textContent = "Pause Timer";
+          btn.className = "w-full py-4 rounded-2xl font-bold text-base text-white bg-amber-500 hover:bg-amber-600 active:scale-95 shadow-md transition";
+        } else {
+          btn.textContent = myData.elapsed > 0 ? "Resume Timer" : "Start Study Timer";
+          btn.className = "w-full py-4 rounded-2xl font-bold text-base text-white bg-emerald-600 hover:bg-emerald-700 active:scale-95 shadow-md transition";
         }
-      });
+
+        // Render Group Modal List
+        document.getElementById("group-modal-list").innerHTML = STUDENTS.map(s => {
+          const sData = state.students[s.id];
+          const sSec = calculateSeconds(sData);
+          const sPct = Math.min(100, Math.round((sSec / TARGET_SECONDS) * 100));
+          const isMe = s.id === activeStudent.id;
+
+          return `
+            <div class="p-3.5 rounded-2xl border ${isMe ? 'border-emerald-300 bg-emerald-50/40' : 'border-slate-100 bg-slate-50'}">
+              <div class="flex justify-between items-center mb-1.5">
+                <div class="flex items-center gap-2">
+                  <span class="font-bold text-sm text-slate-800">${s.name}</span>
+                  ${isMe ? '<span class="text-[10px] bg-emerald-600 text-white font-bold px-1.5 py-0.5 rounded">You</span>' : ''}
+                </div>
+                <span class="text-xs font-mono font-bold text-slate-700">${formatTime(sSec)}</span>
+              </div>
+              <div class="w-full bg-slate-200/60 rounded-full h-1.5 overflow-hidden">
+                <div class="bg-emerald-600 h-1.5 rounded-full" style="width: ${sPct}%"></div>
+              </div>
+              <div class="flex justify-between text-[10px] text-slate-400 mt-1">
+                <span>${sData.isRunning ? 'Studying Now' : (sSec >= TARGET_SECONDS ? 'Completed' : 'Paused')}</span>
+                <span>${sPct}%</span>
+              </div>
+            </div>
+          `;
+        }).join("");
+      }
+
+      // Render Admin View
+      if (!activeStudent) {
+        STUDENTS.forEach(s => {
+          const sData = state.students[s.id];
+          const sec = calculateSeconds(sData);
+          const pct = Math.min(100, Math.round((sec / TARGET_SECONDS) * 100));
+
+          document.getElementById(`adm-time-${s.id}`).textContent = formatTime(sec);
+          document.getElementById(`adm-bar-${s.id}`).style.width = `${pct}%`;
+          document.getElementById(`adm-pct-${s.id}`).textContent = `${pct}% of 5h target`;
+
+          const badge = document.getElementById(`adm-badge-${s.id}`);
+          if (sec >= TARGET_SECONDS) {
+            badge.className = "text-xs px-2.5 py-1 rounded-full font-bold bg-green-100 text-green-700 border border-green-200";
+            badge.textContent = "Goal Reached ✓";
+          } else if (sData.isRunning) {
+            badge.className = "text-xs px-2.5 py-1 rounded-full font-bold bg-emerald-500 text-white animate-pulse";
+            badge.textContent = "Studying Now";
+          } else {
+            badge.className = "text-xs px-2.5 py-1 rounded-full font-medium bg-slate-100 text-slate-500";
+            badge.textContent = sData.elapsed > 0 ? "Paused" : "Offline";
+          }
+        });
+      }
     }
 
-    // 4. CLOUD SYNC LOGIC (DUAL SDK + REST FALLBACK)
-    let fbRef = null;
+    // 5. CLOUD SYNC & DATABASE
+    let dbRef = null;
 
     try {
       firebase.initializeApp({ databaseURL: RTDB_URL, projectId: "study-tracker-time-sync" });
-      fbRef = firebase.database().ref("students");
-      fbRef.on("value", snapshot => {
+      dbRef = firebase.database().ref("medstudy_app");
+      dbRef.on("value", snapshot => {
         const val = snapshot.val();
         if (val) {
-          Object.assign(state, val);
+          // If remote date is from yesterday, trigger reset
+          const today = getTodayKey();
+          if (val.date && val.date !== today) {
+            state.date = today;
+            STUDENTS.forEach(s => {
+              state.students[s.id] = { elapsed: 0, isRunning: false, startTime: 0 };
+            });
+            saveCloud();
+          } else {
+            state = val;
+          }
           renderUI();
         }
       });
     } catch(e) {
-      console.warn("Firebase SDK initialization fallback:", e);
+      console.warn("Firebase SDK init fallback:", e);
     }
 
-    // Secondary sync: REST Polling (Guarantees multi-device sync even on strict Wi-Fi/mobile networks)
+    // Secondary HTTP Sync
     async function pollCloud() {
       try {
-        const res = await fetch(`${RTDB_URL}/students.json`);
+        const res = await fetch(`${RTDB_URL}/medstudy_app.json`);
         if (res.ok) {
           const val = await res.json();
           if (val) {
-            Object.assign(state, val);
+            state = val;
             renderUI();
           }
         }
@@ -266,26 +348,25 @@
     }
     setInterval(pollCloud, 3000);
 
-    function syncToCloud(id) {
-      // 1. Direct Firebase SDK update
-      if (fbRef) {
-        try { fbRef.child(id).set(state[id]); } catch(e) {}
+    function saveCloud() {
+      if (dbRef) {
+        dbRef.set(state);
       }
-      // 2. Direct REST API update
       try {
-        fetch(`${RTDB_URL}/students/${id}.json`, {
+        fetch(`${RTDB_URL}/medstudy_app.json`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(state[id])
+          body: JSON.stringify(state)
         });
       } catch(e) {}
     }
 
-    // 5. USER CONTROLS
-    window.toggleTimer = function(id) {
-      if (currentUser !== id) return;
-      const user = state[id];
+    // 6. USER INTERACTIONS
+    window.userToggleTimer = function() {
+      if (!activeStudent) return;
+      const user = state.students[activeStudent.id];
       const now = Date.now();
+
       if (user.isRunning) {
         user.elapsed += Math.max(0, Math.floor((now - user.startTime) / 1000));
         user.isRunning = false;
@@ -294,20 +375,38 @@
         user.isRunning = true;
         user.startTime = now;
       }
-      syncToCloud(id);
+      state.date = getTodayKey();
+      saveCloud();
       renderUI();
     };
 
-    window.resetTimer = function(id) {
-      if (currentUser !== id) return;
-      if (confirm(`Reset your timer to 0?`)) {
-        state[id] = { elapsed: 0, isRunning: false, startTime: 0 };
-        syncToCloud(id);
+    window.openGroupModal = function() {
+      document.getElementById("group-modal").classList.remove("hidden");
+    };
+
+    window.closeGroupModal = function() {
+      document.getElementById("group-modal").classList.add("hidden");
+    };
+
+    // 7. ADMIN INTERACTIONS
+    window.adminResetUser = function(id) {
+      if (confirm(`Reset timer for ${id}?`)) {
+        state.students[id] = { elapsed: 0, isRunning: false, startTime: 0 };
+        saveCloud();
         renderUI();
       }
     };
 
-    // Render immediately and run clock tick every second
+    window.adminResetAll = function() {
+      if (confirm("Reset timers for ALL students today?")) {
+        STUDENTS.forEach(s => {
+          state.students[s.id] = { elapsed: 0, isRunning: false, startTime: 0 };
+        });
+        saveCloud();
+        renderUI();
+      }
+    };
+
     renderUI();
     setInterval(renderUI, 1000);
   </script>
