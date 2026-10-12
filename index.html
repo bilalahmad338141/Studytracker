@@ -16,6 +16,10 @@
     .live-dot {
       animation: pulse-dot 1.5s infinite ease-in-out;
     }
+    /* Custom thin scrollbar for history panel */
+    .thin-scroll::-webkit-scrollbar { width: 4px; }
+    .thin-scroll::-webkit-scrollbar-track { background: transparent; }
+    .thin-scroll::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 20px; }
   </style>
 </head>
 <body class="bg-slate-50 text-slate-800 min-h-screen font-sans antialiased">
@@ -118,7 +122,7 @@
           </thead>
           <tbody id="history-rows" class="divide-y divide-slate-100 text-slate-700">
             <tr>
-              <td colspan="5" class="py-4 text-center text-slate-400">No past records stored yet. First record appears tomorrow!</td>
+              <td colspan="5" class="py-4 text-center text-slate-400">Loading records...</td>
             </tr>
           </tbody>
         </table>
@@ -128,8 +132,8 @@
 
   <!-- ================= GROUP MODAL (For Friends) ================= -->
   <div id="group-modal" class="hidden fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-    <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100 max-h-[90vh] overflow-y-auto">
-      <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100 max-h-[90vh] flex flex-col">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-4 shrink-0">
         <div>
           <h3 class="text-lg font-bold text-slate-900">Live Group Standings</h3>
           <p class="text-xs text-slate-500">5-hour daily preparation tracker</p>
@@ -139,13 +143,16 @@
         </button>
       </div>
 
-      <div class="space-y-3.5 mb-6" id="group-modal-list"></div>
+      <div class="space-y-3.5 mb-6 shrink-0" id="group-modal-list"></div>
 
-      <!-- Past records snippet inside user view -->
-      <div class="border-t border-slate-100 pt-4">
-        <h4 class="text-xs font-bold text-slate-700 mb-2">Previous Day Results</h4>
-        <div id="modal-yesterday-summary" class="text-xs text-slate-500 space-y-1 bg-slate-50 p-3 rounded-xl border border-slate-100">
-          No previous day records yet.
+      <!-- Past records visual improvement -->
+      <div class="border-t border-slate-100 pt-4 flex flex-col overflow-hidden">
+        <h4 class="text-xs font-bold text-slate-700 mb-2 shrink-0">Previous Days History</h4>
+        <!-- Made it a scrollable list so it shows ALL past days, not just yesterday -->
+        <div id="modal-yesterday-summary" class="space-y-2 overflow-y-auto thin-scroll pr-1 flex-1 min-h-[100px] max-h-[220px]">
+          <div class="text-xs text-slate-500 bg-slate-50 p-3 rounded-xl border border-slate-100 text-center">
+            No previous records yet.
+          </div>
         </div>
       </div>
     </div>
@@ -168,7 +175,8 @@
     }
 
     function getFormattedDate(dateStr) {
-      const d = dateStr ? new Date(dateStr) : new Date();
+      // Appending T00:00:00 fixes the timezone shift bug that made dates go back 1 day
+      const d = dateStr ? new Date(dateStr + "T00:00:00") : new Date();
       return d.toLocaleDateString(undefined, {
         weekday: 'short', month: 'short', day: 'numeric', year: 'numeric'
       });
@@ -184,6 +192,31 @@
       },
       history: {}
     };
+
+    // Safely merge incoming data without overriding history
+    function mergeState(val) {
+      if (!val) return;
+      if (val.date) state.date = val.date;
+      if (val.students) state.students = val.students;
+      if (val.history) Object.assign(state.history, val.history);
+      
+      // Inject the manual historical data explicitly here
+      // Times are converted exactly into seconds (e.g. 4h 15m = 15300s)
+      const INITIAL_HISTORY = {
+        "2026-10-10": { nasir: 15300, zaka: 0, wajid: 9000, mahboob: 14460 }, // Saturday
+        "2026-10-11": { nasir: 0, zaka: 0, wajid: 0, mahboob: 0 },            // Sunday
+        "2026-10-12": { nasir: 18180, zaka: 0, wajid: 0, mahboob: 0 }         // Monday
+      };
+      
+      for (let k in INITIAL_HISTORY) {
+        if (!state.history[k]) {
+          state.history[k] = INITIAL_HISTORY[k];
+        }
+      }
+    }
+    
+    // Run once on load to inject hardcoded past data
+    mergeState({});
 
     const urlParams = new URLSearchParams(window.location.search);
     const currentUser = (urlParams.get("user") || "").toLowerCase().trim();
@@ -324,7 +357,6 @@
             <div class="p-3.5 rounded-2xl border ${isMe ? 'border-emerald-300 bg-emerald-50/40' : 'border-slate-100 bg-slate-50'}">
               <div class="flex justify-between items-center mb-1.5">
                 <div class="flex items-center gap-2">
-                  <!-- Blinking Green Dot Indicator -->
                   ${isRunning ? `
                     <span class="flex h-2.5 w-2.5 relative">
                       <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
@@ -353,21 +385,26 @@
           `;
         }).join("");
 
-        // Modal Yesterday Snippet
+        // Modal Past Days Scrolling Layout Improvement
         const histDates = Object.keys(state.history || {}).sort().reverse();
         if (histDates.length > 0) {
-          const lastDate = histDates[0];
-          const rec = state.history[lastDate];
-          document.getElementById("modal-yesterday-summary").innerHTML = `
-            <div class="font-bold text-slate-700 mb-1">📅 ${lastDate}:</div>
-            <div class="grid grid-cols-2 gap-1">
-              ${STUDENTS.map(s => {
-                const sSec = rec[s.id] || 0;
-                const ok = sSec >= TARGET_SECONDS;
-                return `<div>${s.name}: <strong class="${ok ? 'text-emerald-600' : 'text-amber-600'}">${formatTime(sSec)}</strong>${ok ? '✓' : ''}</div>`;
-              }).join("")}
-            </div>
-          `;
+          document.getElementById("modal-yesterday-summary").innerHTML = histDates.map(dateKey => {
+            const rec = state.history[dateKey];
+            return `
+              <div class="border border-slate-200 rounded-xl bg-white shadow-sm overflow-hidden">
+                <div class="bg-slate-100 px-3 py-1.5 border-b border-slate-200 font-bold text-slate-700 text-xs">
+                  📅 ${getFormattedDate(dateKey)}
+                </div>
+                <div class="p-2 grid grid-cols-2 gap-x-2 gap-y-1 bg-slate-50 text-[11px]">
+                  ${STUDENTS.map(s => {
+                    const sSec = rec[s.id] || 0;
+                    const ok = sSec >= TARGET_SECONDS;
+                    return `<div class="flex justify-between items-center"><span class="text-slate-500">${s.name}</span> <strong class="${ok ? 'text-emerald-600' : 'text-slate-700'}">${formatTime(sSec)}</strong></div>`;
+                  }).join("")}
+                </div>
+              </div>
+            `;
+          }).join("");
         }
       }
 
@@ -402,7 +439,7 @@
             const rowData = state.history[dateKey] || {};
             return `
               <tr class="hover:bg-slate-50">
-                <td class="py-2.5 px-3 font-semibold text-slate-900">${dateKey}</td>
+                <td class="py-2.5 px-3 font-semibold text-slate-900">${getFormattedDate(dateKey)}</td>
                 ${STUDENTS.map(s => {
                   const sec = rowData[s.id] || 0;
                   const met = sec >= TARGET_SECONDS;
@@ -427,7 +464,7 @@
       dbRef.on("value", snapshot => {
         const val = snapshot.val();
         if (val) {
-          state = val;
+          mergeState(val);
           renderUI();
         }
       });
@@ -439,7 +476,7 @@
         if (res.ok) {
           const val = await res.json();
           if (val) {
-            state = val;
+            mergeState(val);
             renderUI();
           }
         }
@@ -448,10 +485,11 @@
     setInterval(pollCloud, 3000);
 
     function saveCloud() {
-      if (dbRef) dbRef.set(state);
+      // Changed to .update and PATCH so it safely merges without wiping history
+      if (dbRef) dbRef.update(state);
       try {
         fetch(`${RTDB_URL}/medstudy_app.json`, {
-          method: "PUT",
+          method: "PATCH", 
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(state)
         });
@@ -517,7 +555,7 @@
     };
 
     window.adminResetAll = function() {
-      if (confirm("Reset ALL student timers to 0 today?")) {
+      if (confirm("Reset ALL student timers to 0 for TODAY? (History will remain intact)")) {
         STUDENTS.forEach(s => {
           state.students[s.id] = { elapsed: 0, isRunning: false, startTime: 0 };
         });
