@@ -8,19 +8,46 @@
   <!-- Firebase Compat SDKs -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  
+  <!-- Tailwind Configuration for Dynamic Theming -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              bg: 'rgb(var(--brand-bg) / <alpha-value>)',
+              fg: 'rgb(var(--brand-fg) / <alpha-value>)'
+            }
+          }
+        }
+      }
+    }
+  </script>
+
   <style>
     @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Inter:wght@400;700;900&display=swap');
     
+    :root {
+      /* Default Dark Mode (Terracotta & Charcoal) */
+      --brand-bg: 219 74 43; /* #db4a2b */
+      --brand-fg: 34 34 34;  /* #222222 */
+    }
+
+    body.light-mode {
+      /* Light Mode (White & Black) */
+      --brand-bg: 245 245 245; /* #f5f5f5 */
+      --brand-fg: 0 0 0;       /* #000000 */
+    }
+    
     body {
-      background-color: #db4a2b;
-      color: #222222;
+      background-color: rgb(var(--brand-bg));
+      color: rgb(var(--brand-fg));
+      transition: background-color 0.3s ease, color 0.3s ease;
     }
-    .font-heading {
-      font-family: 'DM Serif Display', serif;
-    }
-    .font-sans {
-      font-family: 'Inter', sans-serif;
-    }
+
+    .font-heading { font-family: 'DM Serif Display', serif; }
+    .font-sans { font-family: 'Inter', sans-serif; }
     
     @keyframes pulse-dot {
       0%, 100% { opacity: 1; transform: scale(1); }
@@ -30,57 +57,63 @@
       animation: pulse-dot 1.5s infinite ease-in-out;
     }
     
-    /* Custom minimal scrollbar */
+    /* Custom minimal scrollbar matching current theme fg */
     .thin-scroll::-webkit-scrollbar { width: 6px; }
-    .thin-scroll::-webkit-scrollbar-track { background: transparent; border-left: 2px solid #222222; }
-    .thin-scroll::-webkit-scrollbar-thumb { background-color: #222222; }
+    .thin-scroll::-webkit-scrollbar-track { background: transparent; border-left: 2px solid rgb(var(--brand-fg)); }
+    .thin-scroll::-webkit-scrollbar-thumb { background-color: rgb(var(--brand-fg)); }
   </style>
 </head>
-<body class="min-h-screen font-sans antialiased selection:bg-[#222222] selection:text-[#db4a2b]">
+<body class="min-h-screen font-sans antialiased selection:bg-brand-fg selection:text-brand-bg">
 
   <!-- ================= USER VIEW (Minimal Focus Mode) ================= -->
   <div id="user-view" class="hidden min-h-screen flex flex-col justify-between p-6 max-w-2xl mx-auto">
     <!-- Header -->
-    <header class="flex items-center justify-between pt-4 border-b-4 border-[#222222] pb-4">
+    <header class="flex items-center justify-between pt-4 border-b-4 border-brand-fg pb-4">
       <div>
-        <p id="u-date" class="text-[10px] font-bold uppercase tracking-[0.2em] text-[#222222] mb-1"></p>
-        <h2 id="u-name" class="text-4xl font-heading text-[#222222] tracking-tight leading-none"></h2>
+        <p id="u-date" class="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-fg mb-1"></p>
+        <h2 id="u-name" class="text-4xl font-heading text-brand-fg tracking-tight leading-none"></h2>
       </div>
-      <button onclick="openGroupModal()" class="flex items-center gap-2 px-4 py-2 border-2 border-[#222222] text-[10px] font-bold uppercase tracking-widest text-[#222222] hover:bg-[#222222] hover:text-[#db4a2b] transition-colors">
-        Group Standings
-      </button>
+      <div class="flex items-center gap-2">
+        <button onclick="toggleTheme()" class="flex items-center gap-2 px-3 py-2 border-2 border-brand-fg text-[10px] font-bold uppercase tracking-widest text-brand-fg hover:bg-brand-fg hover:text-brand-bg transition-colors">
+          <span class="theme-icon text-sm leading-none">☼</span>
+          <span class="hidden sm:inline">MODE</span>
+        </button>
+        <button onclick="openGroupModal()" class="flex items-center gap-2 px-4 py-2 border-2 border-brand-fg text-[10px] font-bold uppercase tracking-widest text-brand-fg hover:bg-brand-fg hover:text-brand-bg transition-colors">
+          Group Standings
+        </button>
+      </div>
     </header>
 
     <!-- Timer Display -->
     <main class="my-auto py-12 text-center flex flex-col items-center">
-      <div id="u-badge" class="mb-8 px-4 py-1.5 border-2 border-[#222222] text-[10px] font-bold uppercase tracking-widest inline-block">
+      <div id="u-badge" class="mb-8 px-4 py-1.5 border-2 border-brand-fg text-[10px] font-bold uppercase tracking-widest inline-block">
         OFFLINE
       </div>
 
-      <div id="u-timer" class="text-7xl sm:text-9xl font-black text-[#222222] tracking-tighter my-4">
+      <div id="u-timer" class="text-7xl sm:text-9xl font-black text-brand-fg tracking-tighter my-4 transition-colors">
         00:00:00
       </div>
 
       <!-- Target Progress -->
       <div class="w-full max-w-md mt-10">
-        <div class="flex justify-between text-[10px] font-bold uppercase tracking-widest text-[#222222] mb-3">
+        <div class="flex justify-between text-[10px] font-bold uppercase tracking-widest text-brand-fg mb-3">
           <span>Target: 5 HRS</span>
           <span id="u-pct">0%</span>
         </div>
-        <div class="w-full border-2 border-[#222222] h-4 p-0.5">
-          <div id="u-bar" class="bg-[#222222] h-full transition-all duration-300" style="width: 0%"></div>
+        <div class="w-full border-2 border-brand-fg h-4 p-0.5">
+          <div id="u-bar" class="bg-brand-fg h-full transition-all duration-300" style="width: 0%"></div>
         </div>
       </div>
 
       <!-- Control Button -->
       <div class="w-full max-w-md mt-12">
-        <button id="u-toggle-btn" onclick="userToggleTimer()" class="w-full py-5 font-bold text-sm uppercase tracking-[0.2em] bg-[#222222] text-[#db4a2b] border-4 border-[#222222] hover:bg-transparent hover:text-[#222222] transition-colors">
+        <button id="u-toggle-btn" onclick="userToggleTimer()" class="w-full py-5 font-bold text-sm uppercase tracking-[0.2em] bg-brand-fg text-brand-bg border-4 border-brand-fg hover:bg-transparent hover:text-brand-fg transition-colors">
           Initialize Timer
         </button>
       </div>
     </main>
 
-    <footer class="text-center text-[10px] font-bold uppercase tracking-widest text-[#222222] pb-4 border-t-2 border-[#222222] pt-4">
+    <footer class="text-center text-[10px] font-bold uppercase tracking-widest text-brand-fg pb-4 border-t-2 border-brand-fg pt-4">
       Sandups Prep • Auto-Reset Daily
     </footer>
   </div>
@@ -88,25 +121,28 @@
   <!-- ================= ADMIN VIEW (Monitor & Management) ================= -->
   <div id="admin-view" class="hidden max-w-5xl mx-auto px-6 py-10">
     <!-- Admin Header -->
-    <header class="border-4 border-[#222222] p-6 mb-10 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+    <header class="border-4 border-brand-fg p-6 mb-10 flex flex-col sm:flex-row sm:items-center justify-between gap-6 transition-colors">
       <div>
         <p id="admin-date" class="text-[10px] font-bold uppercase tracking-[0.2em] mb-2"></p>
         <h1 class="text-4xl sm:text-5xl font-heading tracking-tight leading-none">
           Admin Console.
         </h1>
       </div>
-      <div class="flex items-center gap-4">
-        <span class="px-4 py-1.5 border-2 border-[#222222] text-[10px] font-bold uppercase tracking-widest bg-[#222222] text-[#db4a2b]">
+      <div class="flex items-center gap-3">
+        <button onclick="toggleTheme()" class="flex items-center gap-2 px-3 py-1.5 border-2 border-brand-fg text-[10px] font-bold uppercase tracking-widest hover:bg-brand-fg hover:text-brand-bg transition-colors">
+          <span class="theme-icon text-sm leading-none">☼</span> MODE
+        </button>
+        <span class="px-4 py-1.5 border-2 border-brand-fg text-[10px] font-bold uppercase tracking-widest bg-brand-fg text-brand-bg">
           Superuser
         </span>
-        <button onclick="adminResetAll()" class="px-4 py-1.5 border-2 border-[#222222] text-[10px] font-bold uppercase tracking-widest hover:bg-[#222222] hover:text-[#db4a2b] transition-colors">
+        <button onclick="adminResetAll()" class="px-4 py-1.5 border-2 border-brand-fg text-[10px] font-bold uppercase tracking-widest hover:bg-brand-fg hover:text-brand-bg transition-colors">
           Reset All Today
         </button>
       </div>
     </header>
 
     <!-- Share Links Box -->
-    <section class="border-2 border-[#222222] p-6 mb-12">
+    <section class="border-2 border-brand-fg p-6 mb-12 transition-colors">
       <h2 class="text-[10px] font-bold uppercase tracking-[0.2em] mb-4">Dashboard Access Links</h2>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="admin-share-links"></div>
     </section>
@@ -116,15 +152,15 @@
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-16" id="admin-cards"></div>
 
     <!-- History Section -->
-    <section class="border-4 border-[#222222]">
-      <div class="p-6 border-b-4 border-[#222222]">
+    <section class="border-4 border-brand-fg transition-colors">
+      <div class="p-6 border-b-4 border-brand-fg">
         <h2 class="text-3xl font-heading tracking-tight">Archive.</h2>
         <p class="text-[10px] font-bold uppercase tracking-widest mt-2">Recorded Study Totals</p>
       </div>
       <div class="overflow-x-auto">
         <table class="w-full text-left">
           <thead>
-            <tr class="border-b-2 border-[#222222] text-[10px] uppercase tracking-widest font-bold bg-[#222222] text-[#db4a2b]">
+            <tr class="border-b-2 border-brand-fg text-[10px] uppercase tracking-widest font-bold bg-brand-fg text-brand-bg transition-colors">
               <th class="py-4 px-6">Date</th>
               <th class="py-4 px-6">Nasir</th>
               <th class="py-4 px-6">Zaka</th>
@@ -132,7 +168,7 @@
               <th class="py-4 px-6">Mahboob</th>
             </tr>
           </thead>
-          <tbody id="history-rows" class="divide-y-2 divide-[#222222]">
+          <tbody id="history-rows" class="divide-y-2 divide-brand-fg">
             <tr>
               <td colspan="5" class="py-8 text-center text-xs font-bold uppercase tracking-widest">Loading records...</td>
             </tr>
@@ -143,24 +179,24 @@
   </div>
 
   <!-- ================= GROUP MODAL (For Friends) ================= -->
-  <div id="group-modal" class="hidden fixed inset-0 bg-[#db4a2b]/95 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-    <div class="border-4 border-[#222222] bg-[#db4a2b] max-w-lg w-full p-6 sm:p-8 flex flex-col max-h-[90vh]">
-      <div class="flex items-center justify-between pb-6 border-b-4 border-[#222222] mb-6 shrink-0">
+  <div id="group-modal" class="hidden fixed inset-0 bg-brand-bg/95 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+    <div class="border-4 border-brand-fg bg-brand-bg max-w-lg w-full p-6 sm:p-8 flex flex-col max-h-[90vh] transition-colors">
+      <div class="flex items-center justify-between pb-6 border-b-4 border-brand-fg mb-6 shrink-0">
         <div>
           <h3 class="text-3xl font-heading tracking-tight">Group Standings.</h3>
           <p class="text-[10px] font-bold uppercase tracking-[0.2em] mt-1">Live 5-Hour Tracker</p>
         </div>
-        <button onclick="closeGroupModal()" class="w-10 h-10 border-2 border-[#222222] hover:bg-[#222222] hover:text-[#db4a2b] font-bold text-lg flex items-center justify-center transition-colors">
+        <button onclick="closeGroupModal()" class="w-10 h-10 border-2 border-brand-fg hover:bg-brand-fg hover:text-brand-bg font-bold text-lg flex items-center justify-center transition-colors">
           ✕
         </button>
       </div>
 
       <div class="space-y-4 mb-8 shrink-0" id="group-modal-list"></div>
 
-      <div class="border-t-4 border-[#222222] pt-6 flex flex-col overflow-hidden">
+      <div class="border-t-4 border-brand-fg pt-6 flex flex-col overflow-hidden">
         <h4 class="text-xl font-heading mb-4 shrink-0">Archive.</h4>
         <div id="modal-yesterday-summary" class="space-y-3 overflow-y-auto thin-scroll pr-3 flex-1 min-h-[100px] max-h-[250px]">
-          <div class="border-2 border-[#222222] p-4 text-center text-[10px] font-bold uppercase tracking-widest">
+          <div class="border-2 border-brand-fg p-4 text-center text-[10px] font-bold uppercase tracking-widest">
             No previous records.
           </div>
         </div>
@@ -178,6 +214,32 @@
       { id: "wajid", name: "Wajid" },
       { id: "mahboob", name: "Mahboob" }
     ];
+
+    // --- Theme Toggle Logic ---
+    function initTheme() {
+      if (localStorage.getItem('medstudy-theme') === 'light') {
+        document.body.classList.add('light-mode');
+        updateThemeIcons(true);
+      } else {
+        updateThemeIcons(false);
+      }
+    }
+    
+    window.toggleTheme = function() {
+      document.body.classList.toggle('light-mode');
+      const isLight = document.body.classList.contains('light-mode');
+      localStorage.setItem('medstudy-theme', isLight ? 'light' : 'dark');
+      updateThemeIcons(isLight);
+    }
+    
+    function updateThemeIcons(isLight) {
+      document.querySelectorAll('.theme-icon').forEach(icon => {
+        icon.textContent = isLight ? '☽' : '☼';
+      });
+    }
+
+    initTheme(); // Run immediately
+    // --------------------------
 
     function getTodayKey() {
       const d = new Date();
@@ -236,17 +298,17 @@
       document.getElementById("admin-date").textContent = `DATE • ${getFormattedDate()}`;
 
       document.getElementById("admin-share-links").innerHTML = STUDENTS.map(s => `
-        <div class="flex items-center justify-between border-2 border-[#222222] p-3">
+        <div class="flex items-center justify-between border-2 border-brand-fg p-3">
           <span class="font-bold text-sm tracking-wide">${s.name}</span>
           <button onclick="navigator.clipboard.writeText('${window.location.origin + window.location.pathname}?user=${s.id}'); alert('Link copied for ${s.name}')" 
-                  class="px-3 py-1.5 bg-[#222222] text-[#db4a2b] text-[10px] font-bold uppercase tracking-widest hover:bg-transparent hover:text-[#222222] hover:border-[#222222] border-2 border-[#222222] transition-colors">
+                  class="px-3 py-1.5 bg-brand-fg text-brand-bg text-[10px] font-bold uppercase tracking-widest hover:bg-transparent hover:text-brand-fg hover:border-brand-fg border-2 border-brand-fg transition-colors">
             Copy
           </button>
         </div>
       `).join("");
 
       document.getElementById("admin-cards").innerHTML = STUDENTS.map(s => `
-        <div class="border-4 border-[#222222] p-6 flex flex-col justify-between relative bg-transparent hover:bg-[#222222] hover:text-[#db4a2b] group transition-colors duration-300">
+        <div class="border-4 border-brand-fg p-6 flex flex-col justify-between relative bg-transparent hover:bg-brand-fg hover:text-brand-bg group transition-colors duration-300">
           <div>
             <div class="flex justify-between items-start mb-4">
               <h3 class="text-3xl font-heading">${s.name}.</h3>
@@ -263,11 +325,11 @@
           <div class="mt-8 pt-4 border-t-2 border-current">
             <span class="text-[9px] font-bold uppercase tracking-widest block mb-3 opacity-70">Adjust Time:</span>
             <div class="flex flex-wrap gap-2">
-              <button onclick="adminAdjustTime('${s.id}', 30)" class="px-2 py-1 border border-current text-[10px] font-bold hover:bg-current hover:text-[#db4a2b] group-hover:hover:bg-[#db4a2b] group-hover:hover:text-[#222222] transition-colors">+30M</button>
-              <button onclick="adminAdjustTime('${s.id}', 60)" class="px-2 py-1 border border-current text-[10px] font-bold hover:bg-current hover:text-[#db4a2b] group-hover:hover:bg-[#db4a2b] group-hover:hover:text-[#222222] transition-colors">+1H</button>
-              <button onclick="adminAdjustTime('${s.id}', -30)" class="px-2 py-1 border border-current text-[10px] font-bold hover:bg-current hover:text-[#db4a2b] group-hover:hover:bg-[#db4a2b] group-hover:hover:text-[#222222] transition-colors">-30M</button>
-              <button onclick="adminSetCustom('${s.id}')" class="px-2 py-1 border border-current text-[10px] font-bold hover:bg-current hover:text-[#db4a2b] group-hover:hover:bg-[#db4a2b] group-hover:hover:text-[#222222] transition-colors">SET</button>
-              <button onclick="adminResetUser('${s.id}')" class="ml-auto px-2 py-1 border border-current text-[10px] font-bold hover:bg-current hover:text-[#db4a2b] group-hover:hover:bg-[#db4a2b] group-hover:hover:text-[#222222] transition-colors">RESET</button>
+              <button onclick="adminAdjustTime('${s.id}', 30)" class="px-2 py-1 border border-current text-[10px] font-bold hover:bg-current hover:text-brand-bg group-hover:hover:bg-brand-bg group-hover:hover:text-brand-fg transition-colors">+30M</button>
+              <button onclick="adminAdjustTime('${s.id}', 60)" class="px-2 py-1 border border-current text-[10px] font-bold hover:bg-current hover:text-brand-bg group-hover:hover:bg-brand-bg group-hover:hover:text-brand-fg transition-colors">+1H</button>
+              <button onclick="adminAdjustTime('${s.id}', -30)" class="px-2 py-1 border border-current text-[10px] font-bold hover:bg-current hover:text-brand-bg group-hover:hover:bg-brand-bg group-hover:hover:text-brand-fg transition-colors">-30M</button>
+              <button onclick="adminSetCustom('${s.id}')" class="px-2 py-1 border border-current text-[10px] font-bold hover:bg-current hover:text-brand-bg group-hover:hover:bg-brand-bg group-hover:hover:text-brand-fg transition-colors">SET</button>
+              <button onclick="adminResetUser('${s.id}')" class="ml-auto px-2 py-1 border border-current text-[10px] font-bold hover:bg-current hover:text-brand-bg group-hover:hover:bg-brand-bg group-hover:hover:text-brand-fg transition-colors">RESET</button>
             </div>
           </div>
         </div>
@@ -321,22 +383,22 @@
         const btn = document.getElementById("u-toggle-btn");
 
         if (sec >= TARGET_SECONDS) {
-          badge.className = "mb-8 px-4 py-1.5 border-2 border-[#222222] bg-[#222222] text-[#db4a2b] text-[10px] font-bold uppercase tracking-widest inline-block";
+          badge.className = "mb-8 px-4 py-1.5 border-2 border-brand-fg bg-brand-fg text-brand-bg text-[10px] font-bold uppercase tracking-widest inline-block transition-colors";
           badge.textContent = "★ TARGET ACHIEVED";
         } else if (myData.isRunning) {
-          badge.className = "mb-8 px-4 py-1.5 border-2 border-[#222222] text-[10px] font-bold uppercase tracking-widest inline-block live-dot";
+          badge.className = "mb-8 px-4 py-1.5 border-2 border-brand-fg text-[10px] font-bold uppercase tracking-widest inline-block live-dot transition-colors";
           badge.textContent = "● STUDYING LIVE";
         } else {
-          badge.className = "mb-8 px-4 py-1.5 border-2 border-[#222222] text-[10px] font-bold uppercase tracking-widest inline-block opacity-70";
+          badge.className = "mb-8 px-4 py-1.5 border-2 border-brand-fg text-[10px] font-bold uppercase tracking-widest inline-block opacity-70 transition-colors";
           badge.textContent = myData.elapsed > 0 ? "⏸ PAUSED" : "○ OFFLINE";
         }
 
         if (myData.isRunning) {
           btn.textContent = "HALT TIMER";
-          btn.className = "w-full py-5 font-bold text-sm uppercase tracking-[0.2em] bg-transparent text-[#222222] border-4 border-[#222222] hover:bg-[#222222] hover:text-[#db4a2b] transition-colors";
+          btn.className = "w-full py-5 font-bold text-sm uppercase tracking-[0.2em] bg-transparent text-brand-fg border-4 border-brand-fg hover:bg-brand-fg hover:text-brand-bg transition-colors";
         } else {
           btn.textContent = myData.elapsed > 0 ? "RESUME TIMER" : "INITIALIZE TIMER";
-          btn.className = "w-full py-5 font-bold text-sm uppercase tracking-[0.2em] bg-[#222222] text-[#db4a2b] border-4 border-[#222222] hover:bg-transparent hover:text-[#222222] transition-colors";
+          btn.className = "w-full py-5 font-bold text-sm uppercase tracking-[0.2em] bg-brand-fg text-brand-bg border-4 border-brand-fg hover:bg-transparent hover:text-brand-fg transition-colors";
         }
 
         document.getElementById("group-modal-list").innerHTML = STUDENTS.map(s => {
@@ -350,19 +412,19 @@
           let dot = isRunning ? '<span class="live-dot">●</span>' : (sSec >= TARGET_SECONDS ? '★' : '○');
 
           return `
-            <div class="p-4 border-2 ${isMe ? 'border-[#222222] bg-[#222222] text-[#db4a2b]' : 'border-[#222222] bg-transparent text-[#222222]'}">
+            <div class="p-4 border-2 transition-colors ${isMe ? 'border-brand-fg bg-brand-fg text-brand-bg' : 'border-brand-fg bg-transparent text-brand-fg'}">
               <div class="flex justify-between items-center mb-2">
                 <div class="flex items-center gap-2">
                   <span class="text-sm">${dot}</span>
                   <span class="font-bold text-lg tracking-wide uppercase">${s.name}</span>
-                  ${isMe ? `<span class="text-[8px] font-bold px-1.5 py-0.5 border ${isMe ? 'border-[#db4a2b]' : 'border-[#222222]'} uppercase tracking-widest">YOU</span>` : ''}
+                  ${isMe ? `<span class="text-[8px] font-bold px-1.5 py-0.5 border ${isMe ? 'border-brand-bg' : 'border-brand-fg'} uppercase tracking-widest">YOU</span>` : ''}
                 </div>
                 <span class="text-xl font-black tracking-tighter">
                   ${formatTime(sSec)}
                 </span>
               </div>
-              <div class="w-full border h-1.5 p-[1px] ${isMe ? 'border-[#db4a2b]' : 'border-[#222222]'}">
-                <div class="${isMe ? 'bg-[#db4a2b]' : 'bg-[#222222]'} h-full" style="width: ${sPct}%"></div>
+              <div class="w-full border h-1.5 p-[1px] ${isMe ? 'border-brand-bg' : 'border-brand-fg'}">
+                <div class="${isMe ? 'bg-brand-bg' : 'bg-brand-fg'} h-full" style="width: ${sPct}%"></div>
               </div>
               <div class="flex justify-between text-[9px] mt-2 font-bold uppercase tracking-widest opacity-80">
                 <span>${statusText}</span>
@@ -377,8 +439,8 @@
           document.getElementById("modal-yesterday-summary").innerHTML = histDates.map(dateKey => {
             const rec = state.history[dateKey];
             return `
-              <div class="border-2 border-[#222222] bg-transparent">
-                <div class="border-b-2 border-[#222222] px-4 py-2 font-bold text-[10px] uppercase tracking-widest">
+              <div class="border-2 border-brand-fg bg-transparent transition-colors">
+                <div class="border-b-2 border-brand-fg px-4 py-2 font-bold text-[10px] uppercase tracking-widest">
                   ${getFormattedDate(dateKey)}
                 </div>
                 <div class="p-3 grid grid-cols-2 gap-x-4 gap-y-2 text-xs font-bold tracking-wide">
@@ -387,7 +449,7 @@
                     const ok = sSec >= TARGET_SECONDS;
                     return `<div class="flex justify-between items-center">
                               <span class="uppercase opacity-80">${s.name}</span> 
-                              <span class="${ok ? 'border-b-2 border-[#222222]' : ''}">${formatTime(sSec)}</span>
+                              <span class="${ok ? 'border-b-2 border-brand-fg' : ''}">${formatTime(sSec)}</span>
                             </div>`;
                   }).join("")}
                 </div>
@@ -409,16 +471,15 @@
 
           const badge = document.getElementById(`adm-badge-${s.id}`);
           if (sec >= TARGET_SECONDS) {
-            badge.className = "text-[9px] px-2 py-1 border-2 border-current bg-current font-bold uppercase tracking-widest";
-            // Uses JS to override text color based on parent hover state
+            badge.className = "text-[9px] px-2 py-1 border-2 border-current bg-current font-bold uppercase tracking-widest transition-colors";
             badge.style.color = "inherit"; 
             badge.innerHTML = `<span style="filter: invert(100%)">★ DONE</span>`;
           } else if (sData.isRunning) {
-            badge.className = "text-[9px] px-2 py-1 border-2 border-current font-bold uppercase tracking-widest live-dot";
+            badge.className = "text-[9px] px-2 py-1 border-2 border-current font-bold uppercase tracking-widest live-dot transition-colors";
             badge.textContent = "● LIVE";
             badge.style.color = "inherit";
           } else {
-            badge.className = "text-[9px] px-2 py-1 border-2 border-current font-bold uppercase tracking-widest opacity-60";
+            badge.className = "text-[9px] px-2 py-1 border-2 border-current font-bold uppercase tracking-widest opacity-60 transition-colors";
             badge.textContent = sData.elapsed > 0 ? "⏸ PAUSED" : "○ OFFLINE";
             badge.style.color = "inherit";
           }
@@ -429,7 +490,7 @@
           document.getElementById("history-rows").innerHTML = histKeys.map(dateKey => {
             const rowData = state.history[dateKey] || {};
             return `
-              <tr class="hover:bg-[#222222] hover:text-[#db4a2b] transition-colors border-b-2 border-[#222222]">
+              <tr class="hover:bg-brand-fg hover:text-brand-bg transition-colors border-b-2 border-brand-fg">
                 <td class="py-4 px-6 font-bold text-sm tracking-wide">${getFormattedDate(dateKey)}</td>
                 ${STUDENTS.map(s => {
                   const sec = rowData[s.id] || 0;
